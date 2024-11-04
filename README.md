@@ -28,7 +28,11 @@ To run this project locally, follow these steps:
   
   https://github.com/akashdas031/OnlineLibrary.git
 
-2. Request Format For PostMan :
+2. Import the project to ypur Favorite IDE like Eclipse,STS,Intellij,NetBeans,VsCode etc
+3. Run as Spring boot application
+4. Java Version 17 is used and Spring boot version 3.3.5 is used
+
+5. Request Format For PostMan :
     Base URL - localhost:6574/book/v1/
     Params -book,file(for book in pdf format),imageFile(for image of the book)
     - book ={
