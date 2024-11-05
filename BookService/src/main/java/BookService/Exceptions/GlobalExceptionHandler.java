@@ -43,5 +43,14 @@ public class GlobalExceptionHandler {
 		map.put("Status", "Failuer");
 		return new ResponseEntity<Map<String,String>>(map,HttpStatus.NOT_ACCEPTABLE);
 	}
+	//Book not found exception
+	@ExceptionHandler(BookNotFoundException.class)
+	public ResponseEntity<Map<String,String>> handlerBookNotFoundException(BookNotFoundException ex){
+		String message=ex.getMessage();
+		Map<String,String> map=new HashMap<>();
+		map.put("message", message);
+		map.put("Status", "Failure");
+		return new ResponseEntity<Map<String,String>>(map,HttpStatus.NOT_FOUND);
+	}
 	
 }
