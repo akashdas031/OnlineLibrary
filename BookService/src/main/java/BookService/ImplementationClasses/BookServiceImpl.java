@@ -1,10 +1,13 @@
 package BookService.ImplementationClasses;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.sql.Date;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -19,6 +22,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import BookService.DTO.BookDetailsDTO;
 import BookService.Entities.Book;
+import BookService.Enums.BookType;
+import BookService.Enums.GENRE;
 import BookService.Exceptions.BookNotFoundException;
 import BookService.Exceptions.BookPdfEmptyException;
 import BookService.Repositories.BookRepository;
@@ -40,7 +45,7 @@ public class BookServiceImpl implements BookService{
 	@Override
 	public Book addBook(Book book,PDFUploadRequest bookPdf,ImageValidationRequest bookImage) throws IOException {
 		String bookId=UUID.randomUUID().toString().substring(0,10).replace("\s", "");
-		
+		book.setPublicstionTime(LocalDateTime.now());
 		String bookPdfPath="C:\\Users\\lenovo\\Desktop\\BookInventory\\AllBooks";
 		String bookImagePath="C:\\Users\\lenovo\\Desktop\\BookInventory\\BookImages";
 		Path pdfPath=Paths.get(bookPdfPath, bookPdf.getOriginalFileName());
@@ -50,7 +55,6 @@ public class BookServiceImpl implements BookService{
 		book.setBookImage(bookImage.getOriginalFileName());
 		Files.copy(bookImage.getInputStream(), imagePath);
 		book.setId(bookId);
-		
 		return bookRepo.save(book);
 	}
     //get all books
@@ -69,8 +73,10 @@ public class BookServiceImpl implements BookService{
                         .bookDescription(book.getDescription())
                         .bookPdfFileName(book.getBookName())
                         .bookImageName(book.getBookImage())
-                        .bookPdfDownloadUrl(bookPdfBaseURL+"\\"+book.getBookPdfName())
-                        .bookImageUrl(bookImageBaseURL+"\\"+book.getBookImage())
+                        .bookPdfDownloadUrl(bookPdfBaseURL+File.separator+book.getBookPdfName())
+                        .bookImageUrl(bookImageBaseURL+File.separator+book.getBookImage())
+                        .bookType(book.getBookType())
+                        .genre(book.getGenre())
                         .build();
 				allBooks.add(singleBook);
 			logger.info("Single Book : "+singleBook);
@@ -92,8 +98,8 @@ public class BookServiceImpl implements BookService{
                 .bookDescription(book.getDescription())
                 .bookPdfFileName(book.getBookName())
                 .bookImageName(book.getBookImage())
-                .bookPdfDownloadUrl(bookPdfBaseURL+"\\"+book.getBookPdfName())
-                .bookImageUrl(bookImageBaseURL+"\\"+book.getBookImage())
+                .bookPdfDownloadUrl(bookPdfBaseURL+File.separator+book.getBookPdfName())
+                .bookImageUrl(bookImageBaseURL+File.separator+book.getBookImage())
                 .build();
 		return singleBook;
 	}
@@ -108,6 +114,8 @@ public class BookServiceImpl implements BookService{
 		ExistingBook.setBookName(book.getBookName());
 		ExistingBook.setAuthorName(book.getAuthorName());
 		ExistingBook.setDescription(book.getDescription());
+		ExistingBook.setBookType(book.getBookType());
+		ExistingBook.setGenre(book.getGenre());
 		if(bookPdf !=null) {
 			Path pdfPath=Paths.get(baseUrlPdf,bookPdf.getOriginalFileName());
 			if(Files.exists(pdfPath)) {
@@ -130,8 +138,10 @@ public class BookServiceImpl implements BookService{
 		                                       .bookDescription(updatedBook.getDescription())
 		                                       .bookImageName(updatedBook.getBookImage())
 		                                       .bookPdfFileName(updatedBook.getBookPdfName())
-		                                       .bookImageUrl(baseUrlImage+"\\"+updatedBook.getBookImage())
-		                                       .bookPdfDownloadUrl(baseUrlPdf+"\\"+updatedBook.getBookPdfName())
+		                                       .bookImageUrl(baseUrlImage+File.separator+updatedBook.getBookImage())
+		                                       .bookPdfDownloadUrl(baseUrlPdf+File.separator+updatedBook.getBookPdfName())
+		                                       .bookType(updatedBook.getBookType())
+		                                       .genre(updatedBook.getGenre())
 		                                       .build();
 		            
 		return response;
@@ -161,6 +171,29 @@ public class BookServiceImpl implements BookService{
 		}else {
 		return "Something went Wrong while Deleting the Book...Try again!!!";
 		}
+	}
+
+	@Override
+	public List<BookDetailsDTO> searchBook(String id, String bookName, String authorName, BookType bookType, GENRE genre) {
+		String baseUrlImage="C:\\Users\\lenovo\\Desktop\\BookInventory\\BookImages";
+		String baseUrlPdf="C:\\Users\\lenovo\\Desktop\\BookInventory\\AllBooks";
+		List<Book> allBooks = this.bookRepo.searchBooks(id, authorName, bookType, genre, bookName);
+		List<BookDetailsDTO> responseBookList=new ArrayList<>();
+		for(Book book:allBooks) {
+			BookDetailsDTO respBook = BookDetailsDTO.builder().bookId(book.getId())
+			                        .bookName(book.getBookName())
+			                        .authorName(book.getAuthorName())
+			                        .bookDescription(book.getDescription())
+			                        .bookPdfFileName(book.getBookPdfName())
+			                        .bookImageName(book.getBookImage())
+			                        .bookPdfDownloadUrl(baseUrlPdf+File.separator+book.getBookPdfName())
+			                        .bookImageUrl(baseUrlImage+File.separator+book.getBookImage())
+			                        .bookType(book.getBookType())
+			                        .genre(book.getGenre())
+			                        .build();
+			responseBookList.add(respBook);
+		}
+		return responseBookList;
 	}
 
 }

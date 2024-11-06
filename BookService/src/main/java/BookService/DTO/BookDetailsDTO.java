@@ -1,5 +1,7 @@
 package BookService.DTO;
 
+import BookService.Enums.BookType;
+import BookService.Enums.GENRE;
 import lombok.Builder;
 import lombok.Data;
 
@@ -15,4 +17,6 @@ public class BookDetailsDTO {
 	private String bookImageName;
 	private String bookPdfDownloadUrl;
 	private String bookImageUrl;
+	private BookType bookType;
+	private GENRE genre;
 }

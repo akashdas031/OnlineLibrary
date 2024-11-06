@@ -16,11 +16,15 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 
 import BookService.DTO.BookDetailsDTO;
 import BookService.Entities.Book;
+import BookService.Enums.BookType;
+import BookService.Enums.GENRE;
+import BookService.Exceptions.InvalidBookDetailsException;
 import BookService.Response.ApiResponse;
 import BookService.Services.BookService;
 import BookService.ValidationRequests.ImageValidationRequest;
@@ -95,5 +99,44 @@ public class BookController {
 		String deletedBook = this.bookServ.deleteBook(bookId);
 		ApiResponse response = ApiResponse.builder().status(200).message("Success").data(deletedBook).build();
 		return new ResponseEntity<ApiResponse>(response,HttpStatus.OK);
+	}
+	
+	//Search book using bookId,BookName,AuthorName,BookType,Genre or any keyword related to book
+	@GetMapping("/searchBook")
+	public ResponseEntity<ApiResponse> searchBook(@Valid @RequestParam(required = false) String id,
+			                                      @RequestParam(required=false) String bookName,
+			                                      @RequestParam(required=false) String authorName,
+			                                      @RequestParam(required=false) String bookType,
+			                                      @RequestParam(required = false) String genre){
+		GENRE genreD=null;
+		if(genre !=null) {
+			 if(!GENRE.isValidGenre(genre)) {
+		        	throw new InvalidBookDetailsException("Please Enter Valid GENRE which must be [FICTION,NON_FICTION,SCIENCE,HISTORY,FANTACY,MYSTERY,BIOGRAPHY,SELF_HELP,TECHNOLOGY]");
+		        }else {
+		        	genreD=GENRE.valueOf(genre);
+		        }
+			 
+		}
+		BookType bookt=null;
+        if(bookType !=null) {
+        	 if(!BookType.isValidBookType(bookType)) {
+             	throw new InvalidBookDetailsException("Book Type Must be [EBOOK,AUDIO_BOOK,HARD_COVER,PAPER_BACK,MAGAZINE ]");
+             }else {
+        	 bookt=BookType.valueOf(bookType);
+             }
+        }
+       
+       
+		List<BookDetailsDTO> books = this.bookServ.searchBook(id, bookName, authorName, bookt, genreD);
+		if(books==null || books.isEmpty()) {
+			ApiResponse error = ApiResponse.builder().status(404).message("Failure").data(books).build();
+			return new ResponseEntity<ApiResponse>(error,HttpStatus.NOT_FOUND);
+
+		}else {
+			ApiResponse response = ApiResponse.builder().status(200).message("Success").data(books).build();
+			return new ResponseEntity<ApiResponse>(response,HttpStatus.OK);
+		}
+		
+		
 	}
 }

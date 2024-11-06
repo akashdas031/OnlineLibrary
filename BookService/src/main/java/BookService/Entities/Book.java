@@ -1,6 +1,14 @@
 package BookService.Entities;
 
+import java.security.Timestamp;
+import java.time.LocalDateTime;
+
+import BookService.Enums.BookType;
+import BookService.Enums.GENRE;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
@@ -33,5 +41,14 @@ public class Book {
 	private String authorName;
 	private String bookImage;
 	private String bookPdfName;
+	private LocalDateTime publicstionTime;
+	
+	@Enumerated(EnumType.STRING)
+	@Column(name = "book_type")
+	private BookType bookType;
+	
+	@Enumerated(EnumType.STRING)
+	@Column(name="genre")
+	private GENRE genre;
 	
 }
