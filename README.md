@@ -50,4 +50,5 @@ End Points :
 - To Update a Book : localhost:6574/book/v1/updateBook/<Your Book ID >
 - To Delete a Book : localhost:6574/book/v1/deleteBook/<Your Book ID >
 - To search a book : localhost:6574/book/v1/<search Keyword>
-- Search KeyWord Must contain id,bookname,authorname,booktype,genre 
+- Search KeyWord Must contain id,bookname,authorname,booktype,genre
+- http://localhost:6574/book/v1/booksByType/ (Required Params -bookType,page,pageSize)
