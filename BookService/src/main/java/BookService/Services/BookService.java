@@ -3,6 +3,9 @@ package BookService.Services;
 import java.io.IOException;
 import java.util.List;
 
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
 import BookService.DTO.BookDetailsDTO;
@@ -21,4 +24,6 @@ public interface BookService {
 	public BookDetailsDTO updateBook(Book book,PDFUploadRequest bookPdf,ImageValidationRequest bookImage,String bookId) throws IOException;
 	public String deleteBook(String bookId) throws IOException;
 	public List<BookDetailsDTO> searchBook(String id,String bookName,String authorName, BookType bookType,GENRE genre);
+	//List Books using Pagination
+	Page<BookDetailsDTO> getBooksByType(BookType bookType,Pageable pageable);
 }

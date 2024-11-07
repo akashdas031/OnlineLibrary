@@ -17,6 +17,9 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -34,6 +37,9 @@ import BookService.ValidationRequests.PDFUploadRequest;
 @Service
 public class BookServiceImpl implements BookService{
 
+	String baseUrlImage="C:\\Users\\lenovo\\Desktop\\BookInventory\\BookImages";
+	String baseUrlPdf="C:\\Users\\lenovo\\Desktop\\BookInventory\\AllBooks";
+	
 	private BookRepository bookRepo;
 	
 	private Logger logger=LoggerFactory.getLogger(BookServiceImpl.class);
@@ -175,8 +181,7 @@ public class BookServiceImpl implements BookService{
 
 	@Override
 	public List<BookDetailsDTO> searchBook(String id, String bookName, String authorName, BookType bookType, GENRE genre) {
-		String baseUrlImage="C:\\Users\\lenovo\\Desktop\\BookInventory\\BookImages";
-		String baseUrlPdf="C:\\Users\\lenovo\\Desktop\\BookInventory\\AllBooks";
+		
 		List<Book> allBooks = this.bookRepo.searchBooks(id, authorName, bookType, genre, bookName);
 		List<BookDetailsDTO> responseBookList=new ArrayList<>();
 		for(Book book:allBooks) {
@@ -195,5 +200,26 @@ public class BookServiceImpl implements BookService{
 		}
 		return responseBookList;
 	}
+	//Get book By book type with Pagination
+
+	@Override
+	public Page<BookDetailsDTO> getBooksByType(BookType bookType, Pageable pageable) {
+		Page<Book> books = bookRepo.findByBookType(bookType, pageable);
+		Page<BookDetailsDTO> booksByType = books.map(book->{
+		return	BookDetailsDTO.builder().bookId(book.getId())
+			                        .bookName(book.getBookName())
+			                        .authorName(book.getAuthorName())
+			                        .bookDescription(book.getDescription())
+			                        .bookPdfFileName(book.getBookPdfName())
+			                        .bookImageName(book.getBookImage())
+			                        .bookPdfDownloadUrl(baseUrlPdf+File.separator+book.getBookPdfName())
+			                        .bookImageUrl(baseUrlImage+File.separator+book.getBookImage())
+			                        .bookType(book.getBookType())
+			                        .genre(book.getGenre())
+			                        .build();
+		});
+		return booksByType;
+	}
+	
 
 }

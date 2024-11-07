@@ -5,8 +5,10 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -138,5 +140,26 @@ public class BookController {
 		}
 		
 		
+	}
+	//get books by book type with pagination
+	@GetMapping("/booksByType")
+	public ResponseEntity<ApiResponse> getBooksByBookType(@RequestParam String bookType,@RequestParam(defaultValue = "0") int page,@RequestParam(defaultValue = "2 ") int pageSize){
+		Pageable pageable = PageRequest.of(page, pageSize);
+		BookType type=null;
+		if(bookType !=null) {
+       	 if(!BookType.isValidBookType(bookType)) {
+            	throw new InvalidBookDetailsException("Book Type Must be [EBOOK,AUDIO_BOOK,HARD_COVER,PAPER_BACK,MAGAZINE ]");
+            }else {
+       	 type=BookType.valueOf(bookType);
+            }
+       }
+		Page<BookDetailsDTO> allBooks = this.bookServ.getBooksByType(type, pageable);
+		if(allBooks==null || allBooks.isEmpty()) {
+			ApiResponse error = ApiResponse.builder().status(404).message("Failure").data("No Books Found For the Type...").build();
+			return new ResponseEntity<ApiResponse>(error,HttpStatus.NOT_FOUND);
+		}else {
+			ApiResponse response = ApiResponse.builder().status(200).message("Success").data(allBooks).build();
+			return new ResponseEntity<ApiResponse>(response,HttpStatus.OK);
+		}
 	}
 }
