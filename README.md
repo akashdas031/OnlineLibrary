@@ -52,3 +52,4 @@ End Points :
 - To search a book : localhost:6574/book/v1/<search Keyword>
 - Search KeyWord Must contain id,bookname,authorname,booktype,genre
 - http://localhost:6574/book/v1/booksByType/ (Required Params -bookType,page,pageSize)
+- To create a User : localhost:6575/onlineLibrary/user/v1/createUser (Pass the parameters according to the Controller)
