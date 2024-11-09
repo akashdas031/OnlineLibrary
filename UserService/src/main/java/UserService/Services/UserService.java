@@ -13,4 +13,6 @@ public interface UserService {
 
 	BookUser createUser(BookUser bookUser,@Valid ImageValidationRequest profilePicture) throws IOException;
 	List<BookUser> findAllUsers();
+	BookUser findUserByVerificationToken(String token);
+	BookUser verifyPhoneNumber(String verificationCode,String phoneNumber);
 }

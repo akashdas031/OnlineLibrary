@@ -72,6 +72,7 @@ public class BookUser {
 	private boolean isEmailVerified;
 	private boolean isPhoneNumberVerified;
 	private String verificationToken;
+	private String phoneVerificationCode;
 	private Integer failedLoginAttempts;
 	private LocalDateTime lockedUntill;
 	@Enumerated(EnumType.STRING)
