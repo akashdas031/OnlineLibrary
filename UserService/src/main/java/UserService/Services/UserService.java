@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.springframework.web.multipart.MultipartFile;
 
+import UserService.DTOS.BookUserDTO;
 import UserService.Entities.BookUser;
 import UserService.ValidationRequests.ImageValidationRequest;
 import jakarta.validation.Valid;
@@ -12,7 +13,8 @@ import jakarta.validation.Valid;
 public interface UserService {
 
 	BookUser createUser(BookUser bookUser,@Valid ImageValidationRequest profilePicture) throws IOException;
-	List<BookUser> findAllUsers();
+	List<BookUserDTO> findAllUsers();
 	BookUser findUserByVerificationToken(String token);
 	BookUser verifyPhoneNumber(String verificationCode,String phoneNumber);
+	BookUserDTO updateUser(BookUserDTO bookUser,String userId,ImageValidationRequest profilePicture)throws IOException;
 }

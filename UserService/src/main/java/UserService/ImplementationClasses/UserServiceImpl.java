@@ -1,10 +1,13 @@
 package UserService.ImplementationClasses;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -13,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import UserService.DTOS.BookUserDTO;
 import UserService.Entities.BookUser;
 import UserService.Enums.AccountStatus;
 import UserService.Enums.MembershipType;
@@ -22,6 +26,7 @@ import UserService.Exceptions.InvalidFileFormatException;
 import UserService.Exceptions.UserNotFoundException;
 import UserService.Helper.VerificationCodeGenerator;
 import UserService.Repositories.UserRepository;
+import UserService.Responses.ApiResponse;
 import UserService.Services.MailService;
 import UserService.Services.SMSService;
 import UserService.Services.UserService;
@@ -65,15 +70,54 @@ public class UserServiceImpl implements UserService{
 		this.mailServ.sendVerificationMail(bookUser.getEmail(), token);
 		String verificationCode=VerificationCodeGenerator.generateVerificationCode();
 		bookUser.setPhoneVerificationCode(verificationCode);
-		this.smsServ.sendVerificationCode(bookUser.getPhoneNumber(), verificationCode);
+		//this.smsServ.sendVerificationCode(bookUser.getPhoneNumber(), verificationCode);
 		BookUser user = userRepo.save(bookUser);
 		return user;
 	}
 
 	@Override
-	public List<BookUser> findAllUsers() {
-		// TODO Auto-generated method stub
-		return null;
+	public List<BookUserDTO> findAllUsers() {
+		List<BookUser> allUsers = this.userRepo.findAll();
+		List<BookUserDTO> allUserResponse=new ArrayList<>();
+		String baseUrl="C:\\Users\\lenovo\\Desktop\\BookInventory\\ProfilePictures";
+		
+		if(allUsers!=null || !allUsers.isEmpty()) {
+			for(BookUser user:allUsers) {
+				BookUserDTO userDto = BookUserDTO.builder().id(user.getId())
+				                     .username(user.getUsername())
+				                     .password(user.getPassword())
+				                     .email(user.getEmail())
+				                     .fullName(user.getFullName())
+				                     .dateOfBirth(user.getDateOfBirth())
+				                     .phoneNumber(user.getPhoneNumber())
+				                     .isEmailVerified(user.isEmailVerified())
+				                     .isPhoneNumberVerified(user.isPhoneNumberVerified())
+				                     .roles(user.getRoles())
+				                     .status(user.getStatus())
+				                     .createdAt(user.getCreatedAt())
+				                     .updatedAt(user.getUpdatedAt())
+				                     .lastLogin(user.getLastLogin())
+				                     .profilePicture(user.getProfilePicture())
+				                     .profilePictureDownloadUrl(baseUrl+File.separator+user.getProfilePicture())
+				                     .address(user.getAddress())
+				                     .permissions(user.getPermissions())
+				                     .failedLoginAttempts(user.getFailedLoginAttempts())
+				                     .lockedUntill(user.getLockedUntill())
+				                     .membershipType(user.getMembershipType())
+				                     .subscriptionStatus(user.getSubscriptionStatus())
+				                     .subscriptionStart(user.getSubscriptionEnd())
+				                     .subscriptionEnd(user.getSubscriptionEnd())
+				                     .lastActivityAt(user.getLastActivityAt())
+				                     .bookmarkedBooks(user.getBookmarkedBooks())
+				                     .recentlyViewedBooks(user.getRecentlyViewedBooks())
+				                     .preferredGernes(user.getPreferredGernes())
+				                     .language(user.getLanguage()).build();
+				allUserResponse.add(userDto);
+				                     
+			}
+			
+		}
+		return allUserResponse;
 	}
 
 	//verify Email address by sending the token
@@ -95,5 +139,77 @@ public class UserServiceImpl implements UserService{
 		BookUser user = this.userRepo.save(verifiedUser);
 		return user;
 	}
+
+	@Override
+	public BookUserDTO updateUser(BookUserDTO bookUser,String userId, ImageValidationRequest profilePicture) throws IOException {
+        BookUser ExistingUser=this.userRepo.findById(userId).orElseThrow(()->new UserNotFoundException("Please Enter Valid userId for Updation.."));
+        String baseUrl="C:\\Users\\lenovo\\Desktop\\BookInventory\\ProfilePictures";
+        if(profilePicture != null) {
+        	//String existingProfilePicture=baseUrl+File.separator+ExistingUser.getProfilePicture();
+        	Path path = Paths.get(baseUrl,ExistingUser.getProfilePicture());
+        	if(Files.exists(path)) {
+        		Files.delete(path);
+        		ExistingUser.setProfilePicture(profilePicture.getOriginalFileName());
+        		Path newImage=Paths.get(baseUrl,profilePicture.getOriginalFileName());
+        		Files.copy(profilePicture.getInputStream(),newImage,StandardCopyOption.REPLACE_EXISTING);
+        	}else {
+        		ExistingUser.setProfilePicture(profilePicture.getOriginalFileName());
+        		Path newImagePath=Paths.get(baseUrl,profilePicture.getOriginalFileName());
+        		Files.copy(profilePicture.getInputStream(),newImagePath,StandardCopyOption.REPLACE_EXISTING);	
+        	}
+        }else {
+        	//Here We can add a default image instead of that and will be implemented after that
+        	throw new InvalidFileFormatException("Profile Picture should not be empty...");
+        }
+        if(bookUser.getUsername() !=null)ExistingUser.setUsername(bookUser.getUsername());
+        if(bookUser.getEmail() !=null)ExistingUser.setEmail(bookUser.getEmail());
+        if(bookUser.getFullName() !=null)ExistingUser.setFullName(bookUser.getFullName());
+        if(bookUser.getDateOfBirth() != null)ExistingUser.setDateOfBirth(bookUser.getDateOfBirth());
+        if(bookUser.getPhoneNumber() != null)ExistingUser.setPhoneNumber(bookUser.getPhoneNumber());
+        //Account Status functionality will be updated later after login module completed
+        //if user perform some activity which doesn't meet the condition then it will be locked 
+        //or some other status will be added after completion of login module
+        if(bookUser.getStatus() != null)ExistingUser.setStatus(bookUser.getStatus());
+        ExistingUser.setUpdatedAt(LocalDateTime.now());
+        //to be implement after login module completed ..based on the logout time it will be updated 
+        //like at which time the user was online last
+        if(bookUser.getAddress() != null)ExistingUser.setAddress(bookUser.getAddress());
+        	BookUser user = this.userRepo.save(ExistingUser);	
+        	BookUserDTO userDto =null;
+        if(user !=null) {
+        	 userDto = BookUserDTO.builder().id(user.getId())
+                    .username(user.getUsername())
+                    .password(user.getPassword())
+                    .email(user.getEmail())
+                    .fullName(user.getFullName())
+                    .dateOfBirth(user.getDateOfBirth())
+                    .phoneNumber(user.getPhoneNumber())
+                    .isEmailVerified(user.isEmailVerified())
+                    .isPhoneNumberVerified(user.isPhoneNumberVerified())
+                    .roles(user.getRoles())
+                    .status(user.getStatus())
+                    .createdAt(user.getCreatedAt())
+                    .updatedAt(user.getUpdatedAt())
+                    .lastLogin(user.getLastLogin())
+                    .profilePicture(user.getProfilePicture())
+                    .profilePictureDownloadUrl(baseUrl+File.separator+user.getProfilePicture())
+                    .address(user.getAddress())
+                    .permissions(user.getPermissions())
+                    .failedLoginAttempts(user.getFailedLoginAttempts())
+                    .lockedUntill(user.getLockedUntill())
+                    .membershipType(user.getMembershipType())
+                    .subscriptionStatus(user.getSubscriptionStatus())
+                    .subscriptionStart(user.getSubscriptionEnd())
+                    .subscriptionEnd(user.getSubscriptionEnd())
+                    .lastActivityAt(user.getLastActivityAt())
+                    .bookmarkedBooks(user.getBookmarkedBooks())
+                    .recentlyViewedBooks(user.getRecentlyViewedBooks())
+                    .preferredGernes(user.getPreferredGernes())
+                    .language(user.getLanguage()).build();
+        }           
+        
+		return userDto;
+	}
+	
 
 }
