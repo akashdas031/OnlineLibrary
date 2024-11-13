@@ -55,3 +55,6 @@ End Points :
 - To create a User : localhost:6575/onlineLibrary/user/v1/createUser (Pass the parameters according to the Controller)
 - To List All Users : localhost:6575/onlineLibrary/user/v1/getAllUsers
 - To Update the user : localhost:6575/onlineLibrary/user/v1/updateUser/<your user id>
+- To Deactivate User Account : localhost:6575/onlineLibrary/user/v1/deactivateAccount/<your user id>
+- To Delete user Account : localhost:6575/onlineLibrary/user/v1/deleteUser/<Your user Id>
+- To get single User : localhost:6575/onlineLibrary/user/v1/getSingleUser/<Your User Id>
