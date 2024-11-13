@@ -23,6 +23,7 @@ import UserService.Enums.MembershipType;
 import UserService.Enums.Role;
 import UserService.Enums.SubscriptionStatus;
 import UserService.Exceptions.InvalidFileFormatException;
+import UserService.Exceptions.ProfilePictureNotFoundException;
 import UserService.Exceptions.UserNotFoundException;
 import UserService.Helper.VerificationCodeGenerator;
 import UserService.Repositories.UserRepository;
@@ -31,24 +32,30 @@ import UserService.Services.MailService;
 import UserService.Services.SMSService;
 import UserService.Services.UserService;
 import UserService.ValidationRequests.ImageValidationRequest;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 
 @Service
 public class UserServiceImpl implements UserService{
 
+	private String baseUrl="C:\\Users\\lenovo\\Desktop\\BookInventory\\ProfilePictures";
 	private UserRepository userRepo; 
 	private MailService mailServ;
 	private SMSService smsServ;
+	@PersistenceContext
+	private EntityManager entityManager;
 	
 	
-	public UserServiceImpl(UserRepository userRepo,MailService mailServ,SMSService smsServ) {
+	public UserServiceImpl(UserRepository userRepo,MailService mailServ,SMSService smsServ,EntityManager entityManager) {
 		this.userRepo = userRepo;
 		this.mailServ=mailServ;
 		this.smsServ=smsServ;
-	}
+		this.entityManager=entityManager;
+		}
 
 	@Override
 	public BookUser createUser(BookUser bookUser,ImageValidationRequest userProfile) throws IOException {
-		String baseUrl="C:\\Users\\lenovo\\Desktop\\BookInventory\\ProfilePictures";
+		//String baseUrl="C:\\Users\\lenovo\\Desktop\\BookInventory\\ProfilePictures";
 		String userId=UUID.randomUUID().toString().substring(0,10).replace("-", "");
 		bookUser.setId(userId);
 		bookUser.setCreatedAt(LocalDateTime.now());
@@ -79,10 +86,11 @@ public class UserServiceImpl implements UserService{
 	public List<BookUserDTO> findAllUsers() {
 		List<BookUser> allUsers = this.userRepo.findAll();
 		List<BookUserDTO> allUserResponse=new ArrayList<>();
-		String baseUrl="C:\\Users\\lenovo\\Desktop\\BookInventory\\ProfilePictures";
+		//String baseUrl="C:\\Users\\lenovo\\Desktop\\BookInventory\\ProfilePictures";
 		
 		if(allUsers!=null || !allUsers.isEmpty()) {
 			for(BookUser user:allUsers) {
+				//this.entityManager.refresh(user);
 				BookUserDTO userDto = BookUserDTO.builder().id(user.getId())
 				                     .username(user.getUsername())
 				                     .password(user.getPassword())
@@ -143,7 +151,7 @@ public class UserServiceImpl implements UserService{
 	@Override
 	public BookUserDTO updateUser(BookUserDTO bookUser,String userId, ImageValidationRequest profilePicture) throws IOException {
         BookUser ExistingUser=this.userRepo.findById(userId).orElseThrow(()->new UserNotFoundException("Please Enter Valid userId for Updation.."));
-        String baseUrl="C:\\Users\\lenovo\\Desktop\\BookInventory\\ProfilePictures";
+       // String baseUrl="C:\\Users\\lenovo\\Desktop\\BookInventory\\ProfilePictures";
         if(profilePicture != null) {
         	//String existingProfilePicture=baseUrl+File.separator+ExistingUser.getProfilePicture();
         	Path path = Paths.get(baseUrl,ExistingUser.getProfilePicture());
@@ -209,6 +217,70 @@ public class UserServiceImpl implements UserService{
         }           
         
 		return userDto;
+	}
+
+	@Override
+	public BookUserDTO findUserByUserId(String userId) {
+		BookUser user = this.userRepo.findById(userId).orElseThrow(()->new UserNotFoundException("User with given id is not available on the server..."));
+		BookUserDTO userDto = BookUserDTO.builder().id(user.getId())
+                .username(user.getUsername())
+                .password(user.getPassword())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .dateOfBirth(user.getDateOfBirth())
+                .phoneNumber(user.getPhoneNumber())
+                .isEmailVerified(user.isEmailVerified())
+                .isPhoneNumberVerified(user.isPhoneNumberVerified())
+                .roles(user.getRoles())
+                .status(user.getStatus())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
+                .lastLogin(user.getLastLogin())
+                .profilePicture(user.getProfilePicture())
+                .profilePictureDownloadUrl(baseUrl+File.separator+user.getProfilePicture())
+                .address(user.getAddress())
+                .permissions(user.getPermissions())
+                .failedLoginAttempts(user.getFailedLoginAttempts())
+                .lockedUntill(user.getLockedUntill())
+                .membershipType(user.getMembershipType())
+                .subscriptionStatus(user.getSubscriptionStatus())
+                .subscriptionStart(user.getSubscriptionEnd())
+                .subscriptionEnd(user.getSubscriptionEnd())
+                .lastActivityAt(user.getLastActivityAt())
+                .bookmarkedBooks(user.getBookmarkedBooks())
+                .recentlyViewedBooks(user.getRecentlyViewedBooks())
+                .preferredGernes(user.getPreferredGernes())
+                .language(user.getLanguage()).build();
+		return userDto;
+	}
+	//delete user by it's id from the server
+
+	@Override
+	public void deleteUserByUserId(String userId) throws IOException {
+		if(this.userRepo.existsById(userId)) {
+			BookUser user = this.userRepo.findById(userId).orElseThrow(()->new UserNotFoundException("User Does Not Exist..."));
+			Path profilePicturePath=Paths.get(baseUrl,user.getProfilePicture());
+			if(Files.exists(profilePicturePath)) {
+				Files.delete(profilePicturePath);
+			}else {
+				throw new ProfilePictureNotFoundException("Something Went wrong While deleting the Profile picture");
+			}
+			this.userRepo.deleteById(userId);
+		}else {
+			throw new UserNotFoundException("User With the ID :" +userId+ " Doesn't Exist on the Server...");
+		}
+		
+	}
+
+	@Override
+	public boolean deactivateAccount(String userId) {
+		if(this.userRepo.existsById(userId)) {
+			BookUser user = this.userRepo.findById(userId).orElseThrow(()->new UserNotFoundException("User with the id Is not Available on the server"));
+			user.setStatus(AccountStatus.INACTIVE);
+			BookUser deactivatedUser = this.userRepo.save(user);
+			return deactivatedUser.getStatus()==AccountStatus.INACTIVE;
+		}
+		return false;
 	}
 	
 

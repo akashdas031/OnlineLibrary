@@ -17,4 +17,7 @@ public interface UserService {
 	BookUser findUserByVerificationToken(String token);
 	BookUser verifyPhoneNumber(String verificationCode,String phoneNumber);
 	BookUserDTO updateUser(BookUserDTO bookUser,String userId,ImageValidationRequest profilePicture)throws IOException;
+	BookUserDTO findUserByUserId(String userId);
+	void deleteUserByUserId(String userId) throws IOException;
+	boolean deactivateAccount(String userId);
 }
