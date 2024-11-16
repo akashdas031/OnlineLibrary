@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.web.multipart.MultipartFile;
 
 import UserService.DTOS.BookUserDTO;
+import UserService.DTOS.LoginRequestDto;
 import UserService.Entities.BookUser;
 import UserService.ValidationRequests.ImageValidationRequest;
 import jakarta.validation.Valid;
@@ -20,4 +21,6 @@ public interface UserService {
 	BookUserDTO findUserByUserId(String userId);
 	void deleteUserByUserId(String userId) throws IOException;
 	boolean deactivateAccount(String userId);
+	boolean LockUser(String userId);
+	BookUser LoginUser(LoginRequestDto userCredentials);
 }

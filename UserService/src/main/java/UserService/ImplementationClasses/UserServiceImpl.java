@@ -12,11 +12,14 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import UserService.DTOS.BookUserDTO;
+import UserService.DTOS.LoginRequestDto;
 import UserService.Entities.BookUser;
 import UserService.Enums.AccountStatus;
 import UserService.Enums.MembershipType;
@@ -44,7 +47,7 @@ public class UserServiceImpl implements UserService{
 	private SMSService smsServ;
 	@PersistenceContext
 	private EntityManager entityManager;
-	
+	private Logger logger=LoggerFactory.getLogger(UserServiceImpl.class);
 	
 	public UserServiceImpl(UserRepository userRepo,MailService mailServ,SMSService smsServ,EntityManager entityManager) {
 		this.userRepo = userRepo;
@@ -56,6 +59,7 @@ public class UserServiceImpl implements UserService{
 	@Override
 	public BookUser createUser(BookUser bookUser,ImageValidationRequest userProfile) throws IOException {
 		//String baseUrl="C:\\Users\\lenovo\\Desktop\\BookInventory\\ProfilePictures";
+		logger.info(bookUser+" ");
 		String userId=UUID.randomUUID().toString().substring(0,10).replace("-", "");
 		bookUser.setId(userId);
 		bookUser.setCreatedAt(LocalDateTime.now());
@@ -78,6 +82,7 @@ public class UserServiceImpl implements UserService{
 		String verificationCode=VerificationCodeGenerator.generateVerificationCode();
 		bookUser.setPhoneVerificationCode(verificationCode);
 		//this.smsServ.sendVerificationCode(bookUser.getPhoneNumber(), verificationCode);
+		
 		BookUser user = userRepo.save(bookUser);
 		return user;
 	}
@@ -281,6 +286,38 @@ public class UserServiceImpl implements UserService{
 			return deactivatedUser.getStatus()==AccountStatus.INACTIVE;
 		}
 		return false;
+	}
+
+	@Override
+	public boolean LockUser(String userId) {
+		//need to be implemented after the login functionality completed
+		return false;
+	}
+
+	@Override
+	public BookUser LoginUser(LoginRequestDto userCredentials) {
+		BookUser user = this.userRepo.findByEmail(userCredentials.getEmail()).orElseThrow(()-> new UserNotFoundException("Please Enter valid Email address..."));
+		
+		logger.info("input password :"+userCredentials.getPassword());
+		logger.info("password in db :"+user.getPassword());
+		
+		if(!user.getPassword().equals(userCredentials.getPassword())) {
+			
+				if(user.getFailedLoginAttempts()==5) {
+					throw new UserNotFoundException("You have Exceed maximum Number of Attempts...");
+				}
+				int failedAttempt=user.getFailedLoginAttempts()+1;
+				user.setFailedLoginAttempts(failedAttempt);
+				this.userRepo.save(user);
+				throw new UserNotFoundException("Password Doesn't match..."+"You have "+(5-user.getFailedLoginAttempts())+" attempt left.."+" Please...Check Password Again");
+			}
+		
+			 if(user.getFailedLoginAttempts()==5) {
+				 throw new UserNotFoundException("You Have Exceed Maximum Number of Attempts...Can Not Log in...");
+			 }else {
+		return user;
+			 
+		 }
 	}
 	
 

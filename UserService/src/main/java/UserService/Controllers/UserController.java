@@ -15,12 +15,14 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 
 import UserService.DTOS.BookUserDTO;
+import UserService.DTOS.LoginRequestDto;
 import UserService.Entities.BookUser;
 import UserService.Exceptions.InvalidFileFormatException;
 import UserService.Exceptions.UserNotFoundException;
@@ -136,6 +138,20 @@ public class UserController {
 			ApiResponse error = ApiResponse.builder().status(500).message("Failure").data("Something Went Wrong...").build();
 			return new ResponseEntity<ApiResponse>(error,HttpStatus.INTERNAL_SERVER_ERROR);
 		}
+	}
+	
+	@PostMapping("/login")
+	public ResponseEntity<ApiResponse> loginUser(@Valid @RequestBody LoginRequestDto loginCredentials){
+		
+			BookUser loginUser = this.userServ.LoginUser(loginCredentials);
+			if(loginUser !=null) {
+				ApiResponse response = ApiResponse.builder().status(200).message("Success").data(loginUser).build();
+				return new ResponseEntity<ApiResponse>(response,HttpStatus.OK);
+			}else {
+				ApiResponse error=ApiResponse.builder().status(404).message("Failure").data(loginUser).build();
+				return new ResponseEntity<ApiResponse>(error,HttpStatus.NOT_FOUND);
+			}
+		
 	}
 	
 }
