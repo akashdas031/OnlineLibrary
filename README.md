@@ -59,3 +59,5 @@ End Points :
 - To Delete user Account : localhost:6575/onlineLibrary/user/v1/deleteUser/<Your user Id>
 - To get single User : localhost:6575/onlineLibrary/user/v1/getSingleUser/<Your User Id>
 -User Login Api : localhost:6575/onlineLibrary/user/v1/login
+- Resend email to verify email token : localhost:6575/onlineLibrary/user/v1/resendEmailVerification/{email}
+- Resend sms to verify phone number : localhost:6575/onlineLibrary/user/v1/resendPhoneVerification/{phoneNumber}
