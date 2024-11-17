@@ -23,4 +23,6 @@ public interface UserService {
 	boolean deactivateAccount(String userId);
 	boolean LockUser(String userId);
 	BookUser LoginUser(LoginRequestDto userCredentials);
+	BookUser resendVerificationEmail(String userId);
+	BookUser resendPhoneVerificationCode(String userId);
 }

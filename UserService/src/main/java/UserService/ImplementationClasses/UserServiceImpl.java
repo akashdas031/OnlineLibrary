@@ -39,190 +39,210 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 
 @Service
-public class UserServiceImpl implements UserService{
+public class UserServiceImpl implements UserService {
 
-	private String baseUrl="C:\\Users\\lenovo\\Desktop\\BookInventory\\ProfilePictures";
-	private UserRepository userRepo; 
-	private MailService mailServ;
-	private SMSService smsServ;
-	@PersistenceContext
-	private EntityManager entityManager;
-	private Logger logger=LoggerFactory.getLogger(UserServiceImpl.class);
-	
-	public UserServiceImpl(UserRepository userRepo,MailService mailServ,SMSService smsServ,EntityManager entityManager) {
-		this.userRepo = userRepo;
-		this.mailServ=mailServ;
-		this.smsServ=smsServ;
-		this.entityManager=entityManager;
-		}
+    private String baseUrl = "C:\\Users\\lenovo\\Desktop\\BookInventory\\ProfilePictures";
+    private UserRepository userRepo;
+    private MailService mailServ;
+    private SMSService smsServ;
+    @PersistenceContext
+    private EntityManager entityManager;
+    private Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
 
-	@Override
-	public BookUser createUser(BookUser bookUser,ImageValidationRequest userProfile) throws IOException {
-		//String baseUrl="C:\\Users\\lenovo\\Desktop\\BookInventory\\ProfilePictures";
-		logger.info(bookUser+" ");
-		String userId=UUID.randomUUID().toString().substring(0,10).replace("-", "");
-		bookUser.setId(userId);
-		bookUser.setCreatedAt(LocalDateTime.now());
-		bookUser.setStatus(AccountStatus.ACTIVE);
-		bookUser.setEmailVerified(false);
-		bookUser.setPhoneNumberVerified(false);
-		String token=UUID.randomUUID().toString().substring(0, 15).replace("\s","");
-		bookUser.setVerificationToken(token);
-		bookUser.addRole(Role.USER);
-		bookUser.setMembershipType(MembershipType.FREE);
-		bookUser.setSubscriptionStatus(SubscriptionStatus.NONE);
-		if( userProfile==null) {
-			throw new InvalidFileFormatException("Profile Picture Should not be Empty...");
-		}else {
-			Path path = Paths.get(baseUrl,userProfile.getOriginalFileName());
-			Files.copy(userProfile.getInputStream(),path);
-			bookUser.setProfilePicture(userProfile.getOriginalFileName());
-		}
-		this.mailServ.sendVerificationMail(bookUser.getEmail(), token);
-		String verificationCode=VerificationCodeGenerator.generateVerificationCode();
-		bookUser.setPhoneVerificationCode(verificationCode);
-		//this.smsServ.sendVerificationCode(bookUser.getPhoneNumber(), verificationCode);
-		
-		BookUser user = userRepo.save(bookUser);
-		return user;
-	}
+    public UserServiceImpl(UserRepository userRepo, MailService mailServ, SMSService smsServ, EntityManager entityManager) {
+        this.userRepo = userRepo;
+        this.mailServ = mailServ;
+        this.smsServ = smsServ;
+        this.entityManager = entityManager;
+    }
 
-	@Override
-	public List<BookUserDTO> findAllUsers() {
-		List<BookUser> allUsers = this.userRepo.findAll();
-		List<BookUserDTO> allUserResponse=new ArrayList<>();
-		//String baseUrl="C:\\Users\\lenovo\\Desktop\\BookInventory\\ProfilePictures";
-		
-		if(allUsers!=null || !allUsers.isEmpty()) {
-			for(BookUser user:allUsers) {
-				//this.entityManager.refresh(user);
-				BookUserDTO userDto = BookUserDTO.builder().id(user.getId())
-				                     .username(user.getUsername())
-				                     .password(user.getPassword())
-				                     .email(user.getEmail())
-				                     .fullName(user.getFullName())
-				                     .dateOfBirth(user.getDateOfBirth())
-				                     .phoneNumber(user.getPhoneNumber())
-				                     .isEmailVerified(user.isEmailVerified())
-				                     .isPhoneNumberVerified(user.isPhoneNumberVerified())
-				                     .roles(user.getRoles())
-				                     .status(user.getStatus())
-				                     .createdAt(user.getCreatedAt())
-				                     .updatedAt(user.getUpdatedAt())
-				                     .lastLogin(user.getLastLogin())
-				                     .profilePicture(user.getProfilePicture())
-				                     .profilePictureDownloadUrl(baseUrl+File.separator+user.getProfilePicture())
-				                     .address(user.getAddress())
-				                     .permissions(user.getPermissions())
-				                     .failedLoginAttempts(user.getFailedLoginAttempts())
-				                     .lockedUntill(user.getLockedUntill())
-				                     .membershipType(user.getMembershipType())
-				                     .subscriptionStatus(user.getSubscriptionStatus())
-				                     .subscriptionStart(user.getSubscriptionEnd())
-				                     .subscriptionEnd(user.getSubscriptionEnd())
-				                     .lastActivityAt(user.getLastActivityAt())
-				                     .bookmarkedBooks(user.getBookmarkedBooks())
-				                     .recentlyViewedBooks(user.getRecentlyViewedBooks())
-				                     .preferredGernes(user.getPreferredGernes())
-				                     .language(user.getLanguage()).build();
-				allUserResponse.add(userDto);
-				                     
-			}
-			
-		}
-		return allUserResponse;
-	}
+    @Override
+    public BookUser createUser(BookUser bookUser, ImageValidationRequest userProfile) throws IOException {
+        logger.info(bookUser + " ");
+        String userId = UUID.randomUUID().toString().substring(0, 10).replace("-", "");
+        bookUser.setId(userId);
+        bookUser.setCreatedAt(LocalDateTime.now());
+        bookUser.setStatus(AccountStatus.ACTIVE);
+        bookUser.setEmailVerified(false);
+        bookUser.setPhoneNumberVerified(false);
+        String token = UUID.randomUUID().toString().substring(0, 15).replace("\s", "");
+        bookUser.setVerificationToken(token);
 
-	//verify Email address by sending the token
-	@Override
-	public BookUser findUserByVerificationToken(String token) {
-	BookUser user = this.userRepo.findByVerificationToken(token).orElseThrow(()->new UserNotFoundException("Invalid Token...Please Enter a validtoken to verify the user"));
-	user.setEmailVerified(true);
-	user.setVerificationToken(null);
-	
-	BookUser verifiedUser = this.userRepo.save(user);
-		return verifiedUser;
-	}
-	
-	@Override
-	public BookUser verifyPhoneNumber(String verificationCode,String phoneNumber) {
-		BookUser verifiedUser = this.userRepo.findByPhoneVerificationCode(verificationCode, phoneNumber).orElseThrow(()->new UserNotFoundException("User with the Phone number is not available..."));
-		verifiedUser.setPhoneNumberVerified(true);
-		verifiedUser.setPhoneVerificationCode(null);
-		BookUser user = this.userRepo.save(verifiedUser);
-		return user;
-	}
+        // Set expiration time for the email verification token (24 hours from now)
+        bookUser.setEmailVerificationTokenExpirationTime(LocalDateTime.now().plusHours(24));
+        bookUser.setPhoneVerificationCodeExpirationTime(LocalDateTime.now().plusHours(24));
 
-	@Override
-	public BookUserDTO updateUser(BookUserDTO bookUser,String userId, ImageValidationRequest profilePicture) throws IOException {
-        BookUser ExistingUser=this.userRepo.findById(userId).orElseThrow(()->new UserNotFoundException("Please Enter Valid userId for Updation.."));
-       // String baseUrl="C:\\Users\\lenovo\\Desktop\\BookInventory\\ProfilePictures";
-        if(profilePicture != null) {
-        	//String existingProfilePicture=baseUrl+File.separator+ExistingUser.getProfilePicture();
-        	Path path = Paths.get(baseUrl,ExistingUser.getProfilePicture());
-        	if(Files.exists(path)) {
-        		Files.delete(path);
-        		ExistingUser.setProfilePicture(profilePicture.getOriginalFileName());
-        		Path newImage=Paths.get(baseUrl,profilePicture.getOriginalFileName());
-        		Files.copy(profilePicture.getInputStream(),newImage,StandardCopyOption.REPLACE_EXISTING);
-        	}else {
-        		ExistingUser.setProfilePicture(profilePicture.getOriginalFileName());
-        		Path newImagePath=Paths.get(baseUrl,profilePicture.getOriginalFileName());
-        		Files.copy(profilePicture.getInputStream(),newImagePath,StandardCopyOption.REPLACE_EXISTING);	
-        	}
-        }else {
-        	//Here We can add a default image instead of that and will be implemented after that
-        	throw new InvalidFileFormatException("Profile Picture should not be empty...");
+        bookUser.addRole(Role.USER);
+        bookUser.setMembershipType(MembershipType.FREE);
+        bookUser.setSubscriptionStatus(SubscriptionStatus.NONE);
+
+        if (userProfile == null) {
+            throw new InvalidFileFormatException("Profile Picture Should not be Empty...");
+        } else {
+            Path path = Paths.get(baseUrl, userProfile.getOriginalFileName());
+            Files.copy(userProfile.getInputStream(), path);
+            bookUser.setProfilePicture(userProfile.getOriginalFileName());
         }
-        if(bookUser.getUsername() !=null)ExistingUser.setUsername(bookUser.getUsername());
-        if(bookUser.getEmail() !=null)ExistingUser.setEmail(bookUser.getEmail());
-        if(bookUser.getFullName() !=null)ExistingUser.setFullName(bookUser.getFullName());
-        if(bookUser.getDateOfBirth() != null)ExistingUser.setDateOfBirth(bookUser.getDateOfBirth());
-        if(bookUser.getPhoneNumber() != null)ExistingUser.setPhoneNumber(bookUser.getPhoneNumber());
-        //Account Status functionality will be updated later after login module completed
-        //if user perform some activity which doesn't meet the condition then it will be locked 
-        //or some other status will be added after completion of login module
-        if(bookUser.getStatus() != null)ExistingUser.setStatus(bookUser.getStatus());
-        ExistingUser.setUpdatedAt(LocalDateTime.now());
-        //to be implement after login module completed ..based on the logout time it will be updated 
-        //like at which time the user was online last
-        if(bookUser.getAddress() != null)ExistingUser.setAddress(bookUser.getAddress());
-        	BookUser user = this.userRepo.save(ExistingUser);	
-        	BookUserDTO userDto =null;
-        if(user !=null) {
-        	 userDto = BookUserDTO.builder().id(user.getId())
-                    .username(user.getUsername())
-                    .password(user.getPassword())
-                    .email(user.getEmail())
-                    .fullName(user.getFullName())
-                    .dateOfBirth(user.getDateOfBirth())
-                    .phoneNumber(user.getPhoneNumber())
-                    .isEmailVerified(user.isEmailVerified())
-                    .isPhoneNumberVerified(user.isPhoneNumberVerified())
-                    .roles(user.getRoles())
-                    .status(user.getStatus())
-                    .createdAt(user.getCreatedAt())
-                    .updatedAt(user.getUpdatedAt())
-                    .lastLogin(user.getLastLogin())
-                    .profilePicture(user.getProfilePicture())
-                    .profilePictureDownloadUrl(baseUrl+File.separator+user.getProfilePicture())
-                    .address(user.getAddress())
-                    .permissions(user.getPermissions())
-                    .failedLoginAttempts(user.getFailedLoginAttempts())
-                    .lockedUntill(user.getLockedUntill())
-                    .membershipType(user.getMembershipType())
-                    .subscriptionStatus(user.getSubscriptionStatus())
-                    .subscriptionStart(user.getSubscriptionEnd())
-                    .subscriptionEnd(user.getSubscriptionEnd())
-                    .lastActivityAt(user.getLastActivityAt())
-                    .bookmarkedBooks(user.getBookmarkedBooks())
-                    .recentlyViewedBooks(user.getRecentlyViewedBooks())
-                    .preferredGernes(user.getPreferredGernes())
-                    .language(user.getLanguage()).build();
-        }           
+
+        this.mailServ.sendVerificationMail(bookUser.getEmail(), token);
+        String verificationCode = VerificationCodeGenerator.generateVerificationCode();
+        bookUser.setPhoneVerificationCode(verificationCode);
+
+        // Send SMS
+        this.smsServ.sendVerificationCode(bookUser.getPhoneNumber(), verificationCode);
+
+        BookUser user = userRepo.save(bookUser);
+        return user;
+    }
+
+    @Override
+    public BookUser resendVerificationEmail(String userId) {
+        BookUser user = this.userRepo.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found with the given ID"));
+
+        // Check if the token has expired
+        if (user.getEmailVerificationTokenExpirationTime().isBefore(LocalDateTime.now())) {
+            // Token has expired, generate a new token
+            String newToken = UUID.randomUUID().toString().substring(0, 15).replace("\s", "");
+            user.setVerificationToken(newToken);
+
+            // Set the new expiration time
+            user.setEmailVerificationTokenExpirationTime(LocalDateTime.now().plusHours(24));
+
+            // Send new verification email
+            this.mailServ.sendVerificationMail(user.getEmail(), newToken);
+        }
+
+        return userRepo.save(user);
+    }
+
+    @Override
+    public BookUser resendPhoneVerificationCode(String userId) {
+        BookUser user = this.userRepo.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found with the given ID"));
+
+        // Check if the phone verification code has expired
+        if (user.getPhoneVerificationCodeExpirationTime().isBefore(LocalDateTime.now())) {
+            // Code has expired, generate a new verification code
+            String newVerificationCode = VerificationCodeGenerator.generateVerificationCode();
+            user.setPhoneVerificationCode(newVerificationCode);
+
+            // Set the new expiration time for the phone verification code
+            user.setPhoneVerificationCodeExpirationTime(LocalDateTime.now().plusHours(24));
+
+            // Send new verification SMS
+            this.smsServ.sendVerificationCode(user.getPhoneNumber(), newVerificationCode);
+        }
+
+        return userRepo.save(user);
+    }
+
+    @Override
+    public BookUser findUserByVerificationToken(String token) {
+        BookUser user = this.userRepo.findByVerificationToken(token)
+                .orElseThrow(() -> new UserNotFoundException("Invalid Token...Please Enter a valid token to verify the user"));
+
+        // Check if the token has expired
+        if (user.getEmailVerificationTokenExpirationTime().isBefore(LocalDateTime.now())) {
+            throw new UserNotFoundException("Token has expired. Please request a new verification email.");
+        }
+
+        user.setEmailVerified(true);
+        user.setVerificationToken(null);
+        return userRepo.save(user);
+    }
+
+    @Override
+    public BookUser verifyPhoneNumber(String verificationCode, String phoneNumber) {
+        BookUser user = this.userRepo.findByPhoneVerificationCode(verificationCode, phoneNumber)
+                .orElseThrow(() -> new UserNotFoundException("User with the Phone number is not available..."));
+
+        // Check if the phone verification code has expired
+        if (user.getPhoneVerificationCodeExpirationTime().isBefore(LocalDateTime.now())) {
+            throw new UserNotFoundException("Verification code has expired. Please request a new one.");
+        }
+
+        user.setPhoneNumberVerified(true);
+        user.setPhoneVerificationCode(null);
+        return userRepo.save(user);
+    }
+
+    @Override
+    public List<BookUserDTO> findAllUsers() {
+        List<BookUser> allUsers = this.userRepo.findAll();
+        List<BookUserDTO> allUserResponse = new ArrayList<>();
+
+        if (allUsers != null || !allUsers.isEmpty()) {
+            for (BookUser user : allUsers) {
+                BookUserDTO userDto = BookUserDTO.builder().id(user.getId())
+                        .username(user.getUsername())
+                        .password(user.getPassword())
+                        .email(user.getEmail())
+                        .fullName(user.getFullName())
+                        .dateOfBirth(user.getDateOfBirth())
+                        .phoneNumber(user.getPhoneNumber())
+                        .isEmailVerified(user.isEmailVerified())
+                        .isPhoneNumberVerified(user.isPhoneNumberVerified())
+                        .roles(user.getRoles())
+                        .status(user.getStatus())
+                        .createdAt(user.getCreatedAt())
+                        .updatedAt(user.getUpdatedAt())
+                        .lastLogin(user.getLastLogin())
+                        .profilePicture(user.getProfilePicture())
+                        .profilePictureDownloadUrl(baseUrl + File.separator + user.getProfilePicture())
+                        .address(user.getAddress())
+                        .permissions(user.getPermissions())
+                        .failedLoginAttempts(user.getFailedLoginAttempts())
+                        .lockedUntill(user.getLockedUntill())
+                        .membershipType(user.getMembershipType())
+                        .subscriptionStatus(user.getSubscriptionStatus())
+                        .subscriptionStart(user.getSubscriptionEnd())
+                        .subscriptionEnd(user.getSubscriptionEnd())
+                        .lastActivityAt(user.getLastActivityAt())
+                        .bookmarkedBooks(user.getBookmarkedBooks())
+                        .recentlyViewedBooks(user.getRecentlyViewedBooks())
+                        .preferredGernes(user.getPreferredGernes())
+                        .language(user.getLanguage()).build();
+                allUserResponse.add(userDto);
+            }
+        }
+        return allUserResponse;
+    }
+
+    @Override
+    public BookUserDTO updateUser(BookUserDTO bookUser, String userId, ImageValidationRequest profilePicture) throws IOException {
+        BookUser existingUser = this.userRepo.findById(userId).orElseThrow(() -> new UserNotFoundException("Please Enter Valid userId for Updation.."));
         
-		return userDto;
-	}
+        if (profilePicture != null) {
+            Path path = Paths.get(baseUrl, existingUser.getProfilePicture());
+            if (Files.exists(path)) {
+                Files.delete(path);
+                existingUser.setProfilePicture(profilePicture.getOriginalFileName());
+                Path newImage = Paths.get(baseUrl, profilePicture.getOriginalFileName());
+                Files.copy(profilePicture.getInputStream(), newImage, StandardCopyOption.REPLACE_EXISTING);
+            } else {
+                existingUser.setProfilePicture(profilePicture.getOriginalFileName());
+                Path newImagePath = Paths.get(baseUrl, profilePicture.getOriginalFileName());
+                Files.copy(profilePicture.getInputStream(), newImagePath, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } else {
+            throw new InvalidFileFormatException("Profile Picture should not be empty.");
+        }
+
+        existingUser.setEmail(bookUser.getEmail());
+        existingUser.setFullName(bookUser.getFullName());
+        existingUser.setPhoneNumber(bookUser.getPhoneNumber());
+        existingUser.setDateOfBirth(bookUser.getDateOfBirth());
+        existingUser.setUpdatedAt(LocalDateTime.now());
+
+        existingUser = userRepo.save(existingUser);
+        return BookUserDTO.builder().id(existingUser.getId())
+                .email(existingUser.getEmail())
+                .fullName(existingUser.getFullName())
+                .phoneNumber(existingUser.getPhoneNumber())
+                .profilePicture(existingUser.getProfilePicture()).build();
+    }
+
 
 	@Override
 	public BookUserDTO findUserByUserId(String userId) {

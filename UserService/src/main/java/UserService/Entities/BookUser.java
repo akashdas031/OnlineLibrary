@@ -37,60 +37,84 @@ import lombok.Setter;
 @Builder
 public class BookUser {
 
-	@Id
-	private String id;
-	@NotBlank(message = "Username must not be empty...")
-	@Size(max = 15,min = 5,message = "username must be between 5 to 15 characters...")
-	private String username;
-	@NotBlank(message = "To create a user You must add a password for it...")
-	@Size(min = 6,message = "Password must contain 6 characters or more...")
-	private String password;
-	@NotBlank(message="email is necessary to create a account...")
-	private String email;
-	private String fullName;
-	private LocalDateTime dateOfBirth;
-	@NotBlank(message = "Phone number should not be empty...")
-	private String phoneNumber;
-	@ElementCollection
+    @Id
+    private String id;
+    
+    @NotBlank(message = "Username must not be empty...")
+    @Size(max = 15, min = 5, message = "username must be between 5 to 15 characters...")
+    private String username;
+
+    @NotBlank(message = "To create a user You must add a password for it...")
+    @Size(min = 6, message = "Password must contain 6 characters or more...")
+    private String password;
+
+    @NotBlank(message="email is necessary to create an account...")
+    private String email;
+
+    private String fullName;
+    private LocalDateTime dateOfBirth;
+
+    @NotBlank(message = "Phone number should not be empty...")
+    private String phoneNumber;
+
+    @ElementCollection
     @Enumerated(EnumType.STRING)
     @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
     @Column(name = "role")
     private Set<Role> roles = new HashSet<>();
-	@Enumerated(EnumType.STRING)
-	private AccountStatus status;
-	private LocalDateTime createdAt;
-	private LocalDateTime updatedAt;
-	private LocalDateTime lastLogin;
-	private String profilePicture;
-	@Embedded
-	private Address address;
-	@ElementCollection
-	@Enumerated(EnumType.STRING)
-	@CollectionTable(name="user_permissions",joinColumns = @JoinColumn(name="user_id"))
-	@Column(name="permission")
-	private Set<Permission> permissions=new HashSet<>();
-	private boolean isEmailVerified;
-	private boolean isPhoneNumberVerified;
-	private String verificationToken;
-	private String phoneVerificationCode;
-	private Integer failedLoginAttempts;
-	private LocalDateTime lockedUntill;
-	@Enumerated(EnumType.STRING)
-	private MembershipType membershipType;
-	private LocalDateTime subscriptionStart;
-	private LocalDateTime subscriptionEnd;
-	private SubscriptionStatus subscriptionStatus;
-	private LocalDateTime lastActivityAt;
-	@ElementCollection
-	private Set<String> bookmarkedBooks;
-	@ElementCollection
-	private List<String> recentlyViewedBooks;
-	private boolean notificationEnabled=true;
-	@ElementCollection
-	private Set<String> preferredGernes;
-	private String language="EN";
-	
-	public void addRole(Role role) {
+
+    @Enumerated(EnumType.STRING)
+    private AccountStatus status;
+
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private LocalDateTime lastLogin;
+    private String profilePicture;
+
+    @Embedded
+    private Address address;
+
+    @ElementCollection
+    @Enumerated(EnumType.STRING)
+    @CollectionTable(name="user_permissions", joinColumns = @JoinColumn(name="user_id"))
+    @Column(name="permission")
+    private Set<Permission> permissions = new HashSet<>();
+
+    private boolean isEmailVerified;
+    private boolean isPhoneNumberVerified;
+
+    private String verificationToken;  // Token for email verification
+    private String phoneVerificationCode;  // Verification code for phone
+
+    // Expiration times for email and phone verification tokens
+    private LocalDateTime emailVerificationTokenExpirationTime;  // Expiration time for email verification token
+    private LocalDateTime phoneVerificationCodeExpirationTime;  // Expiration time for phone verification code
+
+    private Integer failedLoginAttempts;
+    private LocalDateTime lockedUntill;
+
+    @Enumerated(EnumType.STRING)
+    private MembershipType membershipType;
+
+    private LocalDateTime subscriptionStart;
+    private LocalDateTime subscriptionEnd;
+    private SubscriptionStatus subscriptionStatus;
+    private LocalDateTime lastActivityAt;
+
+    @ElementCollection
+    private Set<String> bookmarkedBooks;
+
+    @ElementCollection
+    private List<String> recentlyViewedBooks;
+
+    private boolean notificationEnabled = true;
+
+    @ElementCollection
+    private Set<String> preferredGernes;
+
+    private String language = "EN";
+
+    public void addRole(Role role) {
         roles.add(role);
         permissions.addAll(role.getPermissions());  // Automatically add permissions from the role
     }
@@ -99,5 +123,5 @@ public class BookUser {
         roles.remove(role);
         permissions.removeAll(role.getPermissions());  // Automatically remove permissions from the role
     }
-	
+
 }

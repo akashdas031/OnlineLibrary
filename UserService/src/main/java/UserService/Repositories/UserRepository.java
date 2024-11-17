@@ -10,10 +10,21 @@ import UserService.Entities.BookUser;
 
 public interface UserRepository extends JpaRepository<BookUser, String>{
 
-	Optional<BookUser> findByUsername(String username);
-	Optional<BookUser> findByEmail(String email);
-	Optional<BookUser> findByVerificationToken(String verificationToken);
-	@Query("SELECT u FROM BookUser u WHERE u.phoneVerificationCode = :phoneVerificationCode AND u.phoneNumber = :phoneNumber")
-	Optional<BookUser> findByPhoneVerificationCode(@Param("phoneVerificationCode") String phoneVerificationCode,@Param("phoneNumber") String phoneNumber);
-    
+    // Find user by username
+    Optional<BookUser> findByUsername(String username);
+
+    // Find user by email
+    Optional<BookUser> findByEmail(String email);
+
+    // Find user by email verification token (check if token is not expired)
+    @Query("SELECT u FROM BookUser u WHERE u.verificationToken = :verificationToken AND u.emailVerificationTokenExpirationTime > CURRENT_TIMESTAMP")
+    Optional<BookUser> findByVerificationToken(@Param("verificationToken") String verificationToken);
+
+    // Find user by phone number verification code (check if code is not expired)
+    @Query("SELECT u FROM BookUser u WHERE u.phoneVerificationCode = :phoneVerificationCode AND u.phoneVerificationCodeExpirationTime > CURRENT_TIMESTAMP AND u.phoneNumber = :phoneNumber")
+    Optional<BookUser> findByPhoneVerificationCode(@Param("phoneVerificationCode") String phoneVerificationCode, @Param("phoneNumber") String phoneNumber);
+
+    // Find user by phone number verification code regardless of expiration
+    @Query("SELECT u FROM BookUser u WHERE u.phoneVerificationCode = :phoneVerificationCode AND u.phoneNumber = :phoneNumber")
+    Optional<BookUser> findByPhoneVerificationCodeWithoutExpiration(@Param("phoneVerificationCode") String phoneVerificationCode, @Param("phoneNumber") String phoneNumber);
 }
