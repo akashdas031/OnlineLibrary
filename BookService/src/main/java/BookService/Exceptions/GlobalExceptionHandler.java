@@ -53,4 +53,14 @@ public class GlobalExceptionHandler {
 		return new ResponseEntity<Map<String,String>>(map,HttpStatus.NOT_FOUND);
 	}
 	
+	@ExceptionHandler(InvalidPageException.class)
+	public ResponseEntity<Map<String,String>> handlerInvalidPageException(InvalidPageException ex){
+		String message=ex.getMessage();
+		Map<String,String> map=new HashMap<>();
+		map.put("message", message);
+		map.put("Status", "Failure");
+		return new ResponseEntity<Map<String,String>>(map,HttpStatus.INTERNAL_SERVER_ERROR);
+	}
+	
+	
 }

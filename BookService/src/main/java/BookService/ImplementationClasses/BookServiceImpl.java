@@ -14,6 +14,10 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +33,9 @@ import BookService.Enums.BookType;
 import BookService.Enums.GENRE;
 import BookService.Exceptions.BookNotFoundException;
 import BookService.Exceptions.BookPdfEmptyException;
+import BookService.Exceptions.InvalidPageException;
 import BookService.Repositories.BookRepository;
+import BookService.Response.BookPageResponse;
 import BookService.Services.BookService;
 import BookService.ValidationRequests.ImageValidationRequest;
 import BookService.ValidationRequests.PDFUploadRequest;
@@ -220,6 +226,37 @@ public class BookServiceImpl implements BookService{
 		});
 		return booksByType;
 	}
-	
+
+	//Read book by page
+	@Override
+	public BookPageResponse getBookPage(String bookId, int page) throws IOException {
+		Book book=bookRepo.findById(bookId).orElseThrow(()->new BookNotFoundException("Book you are looking for is not available..."));
+		String content=extractTextFromPdf(new File(baseUrlPdf+File.separator+book.getBookPdfName()));
+		int totalPages=getTotalPage(content);
+		if(page<1 || page >totalPages) {
+			throw new InvalidPageException("Invalid page range...");
+		}
+		String pageContent=getContentForPage(content,page,totalPages);
+		return new BookPageResponse(page,totalPages,pageContent); 
+	}
+	private String extractTextFromPdf(File pdfFile)throws IOException{
+		if(!pdfFile.exists()) {
+			throw new BookNotFoundException("The book is not available on the server");
+		}
+		PDDocument document=Loader.loadPDF(pdfFile);
+		PDFTextStripper stripper=new PDFTextStripper();
+		String text = stripper.getText(document);
+		return text;
+	}
+	private int getTotalPage(String content) {
+		final int charsPerPage=1000;
+		return (int)Math.ceil((double)content.length()/charsPerPage);
+	}
+	private String getContentForPage(String content,int page,int totalPages) {
+		final int charsPerPage=1000;
+		int start=(page-1)*charsPerPage;
+		int end=Math.min(start+charsPerPage, content.length());
+		return content.substring(start,end);
+	}
 
 }

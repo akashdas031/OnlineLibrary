@@ -28,6 +28,7 @@ import BookService.Enums.BookType;
 import BookService.Enums.GENRE;
 import BookService.Exceptions.InvalidBookDetailsException;
 import BookService.Response.ApiResponse;
+import BookService.Response.BookPageResponse;
 import BookService.Services.BookService;
 import BookService.ValidationRequests.ImageValidationRequest;
 import BookService.ValidationRequests.PDFUploadRequest;
@@ -161,5 +162,11 @@ public class BookController {
 			ApiResponse response = ApiResponse.builder().status(200).message("Success").data(allBooks).build();
 			return new ResponseEntity<ApiResponse>(response,HttpStatus.OK);
 		}
+	}
+	@GetMapping("/readBook/{bookId}/{pageNumber}")
+	public ResponseEntity<ApiResponse> readBookByPage(@PathVariable("pageNumber") int pageNumber,@PathVariable("bookId") String bookId) throws IOException{
+		BookPageResponse bookPage = this.bookServ.getBookPage(bookId, pageNumber);
+		ApiResponse response = ApiResponse.builder().data(bookPage).message("Success").status(200).build();
+		return new ResponseEntity<ApiResponse>(response,HttpStatus.OK);
 	}
 }
