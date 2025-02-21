@@ -7,6 +7,7 @@ import java.util.function.Function;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import UserService.Services.BlackListedTokenService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -15,6 +16,12 @@ import io.jsonwebtoken.security.Keys;
 @Component
 public class JwtUtil {
 
+	private BlackListedTokenService blackListedTokenService;
+	
+	private JwtUtil(BlackListedTokenService blackListedTokenService) {
+		this.blackListedTokenService=blackListedTokenService;
+	}
+	
 	private final Key secret=Keys.secretKeyFor(SignatureAlgorithm.HS512);
 	public String generateToken(String email) {
 		return Jwts.builder()
@@ -31,12 +38,15 @@ public class JwtUtil {
 		final Claims claims=extractAllClaims(token);
 		return claimsResolver.apply(claims);
 	}
-	private Claims extractAllClaims(String token) {
+	public Claims extractAllClaims(String token) {
 		// TODO Auto-generated method stub
 		return Jwts.parser().setSigningKey(secret).parseClaimsJws(token).getBody();
 	}
 	
 	public boolean validateToken(String token,UserDetails userDetails) {
+		 if(this.blackListedTokenService.isBlackListed(token)) {
+			 return false;
+		 }
 		final String email=ExtractEmail(token);
 		return (email.equals(userDetails.getUsername()) && !isTokenExpired(token));
 	}

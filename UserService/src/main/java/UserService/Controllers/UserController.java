@@ -1,10 +1,15 @@
 package UserService.Controllers;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -15,18 +20,25 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 
+import UserService.Configurations.JwtUtil;
 import UserService.DTOs.LoginRequestDto;
+import UserService.DTOs.UserActivityDTO;
 import UserService.DTOs.UserDTO;
 import UserService.Entities.UserEntity;
 import UserService.Exceptions.UserNotFoundException;
+import UserService.RabbitMQConfigurations.UserActivityProducer;
+import UserService.Repositories.BlackListedTokenRepository;
+import UserService.Repositories.UserRepository;
 import UserService.Responses.ApiResponse;
 import UserService.Responses.LoginResponse;
 import UserService.Services.UserService;
 import UserService.ValidationRequests.ImageValidationRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 
@@ -35,14 +47,20 @@ import jakarta.validation.Valid;
 @Validated
 public class UserController {
 
-
+	private Logger logger=LoggerFactory.getLogger(UserController.class);
     private UserService userServ;
-    
+    private BlackListedTokenRepository blackRepository;
+    private UserActivityProducer userActivityProducer;
+    private JwtUtil jwtUtil;
+    private UserRepository userRepo;
     @Autowired
-    public UserController(UserService userServ) {
+    public UserController(UserService userServ,BlackListedTokenRepository blackRepository,UserActivityProducer userActivityProducer,JwtUtil jwtUtil,UserRepository userRepo) {
     	
         this.userServ = userServ;
-        
+        this.blackRepository=blackRepository;
+        this.userActivityProducer=userActivityProducer;
+        this.jwtUtil=jwtUtil;
+        this.userRepo=userRepo;
     }
 
     @PreAuthorize("permitAll()")
@@ -87,16 +105,29 @@ public class UserController {
     @PreAuthorize("permitAll()")
 	@PostMapping("/login")
 	public ResponseEntity<LoginResponse> login(@RequestBody LoginRequestDto credentails){
+    	
 		LoginResponse user = this.userServ.LoginUser(credentails);
+		String userActivityId = UUID.randomUUID().toString().substring(10).replaceAll("-", "").trim();
+		UserActivityDTO activity = UserActivityDTO.builder().userActivityId(userActivityId).userId(user.getUserEntity().getId()).action("LOGIN").details("User Logged in To the Application..")
+								 .timeStamp(LocalDateTime.now()).ipAddress("127.0.0.0").build();
+		this.userActivityProducer.sendActivity(activity);
 		return new ResponseEntity<LoginResponse>(user,HttpStatus.OK);
 	}
 
     //get all users 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/getAllUsers")
-    public ResponseEntity<ApiResponse> findAllUsers() {
+    public ResponseEntity<ApiResponse> findAllUsers(@RequestHeader("Authorization") String token) {
+    	 token=token.substring(7);
+        String email = this.jwtUtil.ExtractEmail(token);
+        logger.info("Email :"+email);
+        UserEntity user=this.userRepo.findByEmail(email).orElseThrow(()->new UserNotFoundException("Invalid Token...."));
         List<UserDTO> allUsers = this.userServ.findAllUsers();
         if (allUsers != null) {
+        	String userActivityId = UUID.randomUUID().toString().substring(10).replaceAll("-", "").trim();
+    		UserActivityDTO activity = UserActivityDTO.builder().userActivityId(userActivityId).userId(user.getId()).action("FETCH_ALL_USER_DETAILS").details("User Fetch the api to view all user details..")
+    								 .timeStamp(LocalDateTime.now()).ipAddress("127.0.0.0").build();
+    		this.userActivityProducer.sendActivity(activity);
             ApiResponse response = ApiResponse.builder().status(200).message("Success").data(allUsers).build();
             return new ResponseEntity<>(response, HttpStatus.OK);
         } else {
@@ -157,6 +188,23 @@ public class UserController {
             ApiResponse error = ApiResponse.builder().status(500).message("Failure").data("Something went wrong...").build();
             return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+    
+    //logout user
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse> logout(@RequestHeader(name="Authorization",required = false) String authHeader){
+    	if(authHeader==null || !authHeader.startsWith("Bearer ")) {
+    		ApiResponse error = ApiResponse.builder().message("Invalid Token").status(403).data(authHeader).build();
+    		return new ResponseEntity<ApiResponse>(error,HttpStatus.BAD_REQUEST);
+    	}
+    	String token=authHeader.substring(7);
+    	if(this.blackRepository.existsByToken(token)) {
+    		ApiResponse error = ApiResponse.builder().message("Token has been Expired...").status(403).data("Login Again to perform this activity...").build();
+    		return new ResponseEntity<ApiResponse>(error,HttpStatus.BAD_REQUEST);
+    	}
+    	this.userServ.logoutUser(token);
+    	ApiResponse response = ApiResponse.builder().message("Logout Successful!!!").status(200).data("You have been Loggedout succesfully!!! Visit again and gain knowledge!!!").build();
+        return new ResponseEntity<ApiResponse>(response,HttpStatus.OK);
     }
 
 }

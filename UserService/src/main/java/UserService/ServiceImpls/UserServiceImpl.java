@@ -8,8 +8,11 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,9 +32,11 @@ import UserService.Exceptions.UserNotFoundException;
 import UserService.Helper.VerificationCodeGenerator;
 import UserService.Repositories.UserRepository;
 import UserService.Responses.LoginResponse;
+import UserService.Services.BlackListedTokenService;
 import UserService.Services.MailService;
 import UserService.Services.UserService;
 import UserService.ValidationRequests.ImageValidationRequest;
+import io.jsonwebtoken.Claims;
 import jakarta.validation.Valid;
 
 @Service
@@ -42,11 +47,13 @@ public class UserServiceImpl implements UserService{
     private MailService mailServ;
     private PasswordEncoder passwordEncoder;
     private JwtUtil jwtUtil;
-    public UserServiceImpl(UserRepository userRepo, MailService mailServ,PasswordEncoder passwordEncoder,JwtUtil jwtUtil){
+    private BlackListedTokenService blackListedTokenService;
+    public UserServiceImpl(UserRepository userRepo, MailService mailServ,PasswordEncoder passwordEncoder,JwtUtil jwtUtil,BlackListedTokenService blackListedTokenService){
         this.userRepo = userRepo;
         this.mailServ = mailServ;
         this.passwordEncoder=passwordEncoder;
         this.jwtUtil=jwtUtil;
+        this.blackListedTokenService=blackListedTokenService;
     }
 
 
@@ -338,6 +345,24 @@ public class UserServiceImpl implements UserService{
 		}
 		return false;
     }
+
+
+	@Override
+	public void logoutUser(String token) {
+		if(token != null && !token.isEmpty()) {
+			String email = this.jwtUtil.ExtractEmail(token);
+			UserEntity user = this.userRepo.findByEmail(email).orElseThrow(()->new UserNotFoundException("Invalid Credentails..."));
+			user.setLastLogin(LocalDateTime.now());
+			this.userRepo.save(user);
+			Claims claims = this.jwtUtil.extractAllClaims(token);
+			if(claims != null) {
+				Date expiration = claims.getExpiration();
+				LocalDateTime expirationTime=expiration.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+			blackListedTokenService.addToBlackList(token, expirationTime);
+			}
+		}
+		
+	}
 
 
     

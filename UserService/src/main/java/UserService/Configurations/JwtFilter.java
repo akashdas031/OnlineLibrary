@@ -11,6 +11,7 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import UserService.Services.BlackListedTokenService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,9 +22,11 @@ public class JwtFilter extends OncePerRequestFilter{
 
 	private final JwtUtil jwtUtil;
 	private final UserDetailsService userDetailsService;
-	public JwtFilter(JwtUtil jwtUtil,UserDetailsService userDetailsService){
+	private BlackListedTokenService blackListedTokenService;
+	public JwtFilter(JwtUtil jwtUtil,UserDetailsService userDetailsService,BlackListedTokenService blackListedTokenService){
 		this.jwtUtil=jwtUtil;
 		this.userDetailsService=userDetailsService;
+		this.blackListedTokenService=blackListedTokenService;
 	}
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -33,6 +36,10 @@ public class JwtFilter extends OncePerRequestFilter{
 		String jwtToken=null;
 		if(authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
 			jwtToken=authorizationHeader.substring(7);
+			if(this.blackListedTokenService.isBlackListed(jwtToken)) {
+				response.sendError(HttpServletResponse.SC_UNAUTHORIZED,"Token is Expired");
+				return;
+			}
 			email=jwtUtil.ExtractEmail(jwtToken);
 		}
 		

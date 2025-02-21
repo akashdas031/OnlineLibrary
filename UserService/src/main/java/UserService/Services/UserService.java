@@ -27,4 +27,7 @@ public interface UserService {
     boolean deactivateAccount(String userId);
     //lock user
     //boolean LockUser(String userId);
+    
+    //logout user
+    void logoutUser(String token);
 }
