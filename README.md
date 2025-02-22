@@ -7,7 +7,7 @@ This project is a Book Management Service that allows users to add books with de
 
 ## Features
 
-- **Add Books**: Users can add new books with metadata, including book name, author name, description, and file uploads (PDF and image formats).
+- **Add Books **: Users can add new books with metadata, including book name, author name, description, and file uploads (PDF and image formats).
 - **Validation Using Custom Annotations**: Ensures that all inputs meet specified criteria (e.g., non-empty fields, valid file types).
 - **Error Handling**: Provides meaningful error messages in response to validation failures.
 - **File Uploads**: Supports uploading PDF files for books and image files for cover art in supported formats (JPG, JPEG, PNG).
