@@ -136,11 +136,19 @@ public class UserController {
         }
     }
     //Update User Details api
-     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_LIBRARIAN','ROLE_USER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_LIBRARIAN','ROLE_USER')")
     @PatchMapping(value = "/updateUser/{userId}", consumes = {"multipart/form-data"})
-    public ResponseEntity<ApiResponse> updateUser(@Valid @RequestPart("user") UserDTO user, @Valid @ModelAttribute ImageValidationRequest profilePicture, @PathVariable("userId") String userId) throws IOException {
+    public ResponseEntity<ApiResponse> updateUser(@RequestHeader("Authorization") String token,@Valid @RequestPart("user") UserDTO user, @Valid @ModelAttribute ImageValidationRequest profilePicture, @PathVariable("userId") String userId) throws IOException {
         UserDTO updatedUser = this.userServ.updateUser(user, userId, profilePicture);
         if (updatedUser != null) {
+        	token=token.substring(7);
+            String email = this.jwtUtil.ExtractEmail(token);
+            logger.info("Email :"+email);
+            UserEntity userFromToken=this.userRepo.findByEmail(email).orElseThrow(()->new UserNotFoundException("Invalid Token...."));
+        	String userActivityId = UUID.randomUUID().toString().substring(10).replaceAll("-", "").trim();
+    		UserActivityDTO activity = UserActivityDTO.builder().userActivityId(userActivityId).userId(userFromToken.getId()).action("UPDATE_ACCOUNT").details("User Update the profile...")
+    								 .timeStamp(LocalDateTime.now()).ipAddress("127.0.0.0").build();
+    		this.userActivityProducer.sendActivity(activity);
             ApiResponse response = ApiResponse.builder().message("Success").status(201).data(updatedUser).build();
             return new ResponseEntity<>(response, HttpStatus.CREATED);
         } else {
@@ -155,6 +163,10 @@ public class UserController {
     public ResponseEntity<ApiResponse> findUserByUserId(@PathVariable("userId") String userId) {
         UserDTO user = this.userServ.findUserByUserId(userId);
         if (user != null) {
+        	String userActivityId = UUID.randomUUID().toString().substring(10).replaceAll("-", "").trim();
+    		UserActivityDTO activity = UserActivityDTO.builder().userActivityId(userActivityId).userId(user.getId()).action("PROFILE_VIEW").details("User Visit his profile...")
+    								 .timeStamp(LocalDateTime.now()).ipAddress("127.0.0.0").build();
+    		this.userActivityProducer.sendActivity(activity);
             ApiResponse response = ApiResponse.builder().message("Success").data(user).status(200).build();
             return new ResponseEntity<>(response, HttpStatus.OK);
         } else {
@@ -166,8 +178,16 @@ public class UserController {
     //having role as ADMIN
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     @DeleteMapping("/deleteUser/{userId}")
-    public ResponseEntity<ApiResponse> deleteUserByUserId(@PathVariable("userId") String userId) throws IOException {
+    public ResponseEntity<ApiResponse> deleteUserByUserId(@RequestHeader("Authorization") String token, @PathVariable("userId") String userId) throws IOException {
         try {
+        	token=token.substring(7);
+            String email = this.jwtUtil.ExtractEmail(token);
+            logger.info("Email :"+email);
+            UserEntity user=this.userRepo.findByEmail(email).orElseThrow(()->new UserNotFoundException("Invalid Token...."));
+        	String userActivityId = UUID.randomUUID().toString().substring(10).replaceAll("-", "").trim();
+    		UserActivityDTO activity = UserActivityDTO.builder().userActivityId(userActivityId).userId(user.getId()).action("DELETE_ACCOUNT").details("User Delete a account if Id : "+userId+" from the Application..")
+    								 .timeStamp(LocalDateTime.now()).ipAddress("127.0.0.0").build();
+    		this.userActivityProducer.sendActivity(activity);
             this.userServ.deleteUserByUserId(userId);
             ApiResponse response = ApiResponse.builder().message("Success").status(200).data("User removed from the server successfully!!!").build();
             return new ResponseEntity<>(response, HttpStatus.OK);
@@ -179,9 +199,18 @@ public class UserController {
     //deactivate user account 
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_LIBRARIAN')")
     @PatchMapping("/deactivateAccount/{userId}")
-    public ResponseEntity<ApiResponse> deactivateAccount(@PathVariable("userId") String userId) {
+    public ResponseEntity<ApiResponse> deactivateAccount(@RequestHeader("Authorization") String token ,@PathVariable("userId") String userId) {
         boolean isActive = this.userServ.deactivateAccount(userId);
         if (isActive) {
+        	token=token.substring(7);
+            String email = this.jwtUtil.ExtractEmail(token);
+            logger.info("Email :"+email);
+            UserEntity user=this.userRepo.findByEmail(email).orElseThrow(()->new UserNotFoundException("Invalid Token...."));
+        	String userActivityId = UUID.randomUUID().toString().substring(10).replaceAll("-", "").trim();
+    		UserActivityDTO activity = UserActivityDTO.builder().userActivityId(userActivityId).userId(user.getId()).action("DEACTIVATE_ACCOUNT").details("User Deactivate a account with id"+userId+" from the Application..")
+    								 .timeStamp(LocalDateTime.now()).ipAddress("127.0.0.0").build();
+    		this.userActivityProducer.sendActivity(activity);
+    		
             ApiResponse response = ApiResponse.builder().status(200).message("Success").data("User deactivated successfully...").build();
             return new ResponseEntity<>(response, HttpStatus.OK);
         } else {
@@ -198,11 +227,20 @@ public class UserController {
     		return new ResponseEntity<ApiResponse>(error,HttpStatus.BAD_REQUEST);
     	}
     	String token=authHeader.substring(7);
+        String email = this.jwtUtil.ExtractEmail(token);
+        logger.info("Email :"+email);
+        UserEntity user=this.userRepo.findByEmail(email).orElseThrow(()->new UserNotFoundException("Invalid Token...."));
+    	String userActivityId = UUID.randomUUID().toString().substring(10).replaceAll("-", "").trim();
+		UserActivityDTO activity = UserActivityDTO.builder().userActivityId(userActivityId).userId(user.getId()).action("LOGOUT").details("User Logged out from the Application..")
+								 .timeStamp(LocalDateTime.now()).ipAddress("127.0.0.0").build();
+		
     	if(this.blackRepository.existsByToken(token)) {
     		ApiResponse error = ApiResponse.builder().message("Token has been Expired...").status(403).data("Login Again to perform this activity...").build();
     		return new ResponseEntity<ApiResponse>(error,HttpStatus.BAD_REQUEST);
     	}
     	this.userServ.logoutUser(token);
+    	this.userActivityProducer.sendActivity(activity);
+    	//send user activity
     	ApiResponse response = ApiResponse.builder().message("Logout Successful!!!").status(200).data("You have been Loggedout succesfully!!! Visit again and gain knowledge!!!").build();
         return new ResponseEntity<ApiResponse>(response,HttpStatus.OK);
     }
