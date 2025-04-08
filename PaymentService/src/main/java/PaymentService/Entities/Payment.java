@@ -13,6 +13,6 @@ public class Payment {
     private String orderId;
     private String paymentId;
     private String status;
-    private String userId;
+    private String productId;
     private double amount;
 }

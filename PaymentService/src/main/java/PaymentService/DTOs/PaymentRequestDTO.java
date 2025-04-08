@@ -4,6 +4,6 @@ import lombok.Data;
 
 @Data
 public class PaymentRequestDTO {
-    private String userId;
+    private String productId;
     private double amount; // Amount in INR
 }

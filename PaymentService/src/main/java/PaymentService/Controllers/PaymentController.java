@@ -1,16 +1,17 @@
 package PaymentService.Controllers;
 
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import PaymentService.DTOs.PaymentRequestDTO;
 import PaymentService.DTOs.PaymentResponseDTO;
+import PaymentService.Entities.UpdatePayment;
 import PaymentService.Services.RazorPayService;
 
 @RestController
 @RequestMapping("/api/payments")
+@CrossOrigin
 public class PaymentController {
 
     private final RazorPayService razorpayService;
@@ -25,10 +26,8 @@ public class PaymentController {
     }
 
     @PostMapping("/update-status")
-    public ResponseEntity<String> updatePayment(@RequestParam String paymentId,
-                                                @RequestParam String orderId,
-                                                @RequestParam String status) {
-        razorpayService.updatePayment(paymentId, orderId, status);
+    public ResponseEntity<String> updatePayment(@RequestBody UpdatePayment updatePayment) {
+        razorpayService.updatePayment(updatePayment);
         return ResponseEntity.ok("Payment status updated successfully.");
     }
     
