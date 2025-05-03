@@ -19,4 +19,5 @@ public class BookDetailsDTO {
 	private String bookImageUrl;
 	private BookType bookType;
 	private GENRE genre;
+	private int totalPages;
 }

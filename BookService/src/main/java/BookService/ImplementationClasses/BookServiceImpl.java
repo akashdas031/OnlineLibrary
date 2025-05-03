@@ -2,6 +2,7 @@ package BookService.ImplementationClasses;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -67,6 +68,10 @@ public class BookServiceImpl implements BookService{
 		book.setBookImage(bookImage.getOriginalFileName());
 		Files.copy(bookImage.getInputStream(), imagePath);
 		book.setId(bookId);
+		InputStream is=bookPdf.getInputStream();
+		PDDocument document=Loader.loadPDF(bookPdf.getFile().getBytes());
+		logger.info("Total Number Of Pages of Book :"+bookPdf.getOriginalFileName()+" is : "+document.getNumberOfPages());
+		book.setTotalPages(document.getNumberOfPages());		
 		return bookRepo.save(book);
 	}
     //get all books
@@ -89,6 +94,7 @@ public class BookServiceImpl implements BookService{
                         .bookImageUrl(bookImageBaseURL+File.separator+book.getBookImage())
                         .bookType(book.getBookType())
                         .genre(book.getGenre())
+                        .totalPages(book.getTotalPages())
                         .build();
 				allBooks.add(singleBook);
 			logger.info("Single Book : "+singleBook);
@@ -112,6 +118,7 @@ public class BookServiceImpl implements BookService{
                 .bookImageName(book.getBookImage())
                 .bookPdfDownloadUrl(bookPdfBaseURL+File.separator+book.getBookPdfName())
                 .bookImageUrl(bookImageBaseURL+File.separator+book.getBookImage())
+                .totalPages(book.getTotalPages())
                 .build();
 		return singleBook;
 	}
@@ -154,6 +161,7 @@ public class BookServiceImpl implements BookService{
 		                                       .bookPdfDownloadUrl(baseUrlPdf+File.separator+updatedBook.getBookPdfName())
 		                                       .bookType(updatedBook.getBookType())
 		                                       .genre(updatedBook.getGenre())
+		                                       .totalPages(updatedBook.getTotalPages())
 		                                       .build();
 		            
 		return response;
@@ -201,6 +209,7 @@ public class BookServiceImpl implements BookService{
 			                        .bookImageUrl(baseUrlImage+File.separator+book.getBookImage())
 			                        .bookType(book.getBookType())
 			                        .genre(book.getGenre())
+			                        .totalPages(book.getTotalPages())
 			                        .build();
 			responseBookList.add(respBook);
 		}
@@ -211,7 +220,9 @@ public class BookServiceImpl implements BookService{
 	@Override
 	public Page<BookDetailsDTO> getBooksByType(BookType bookType, Pageable pageable) {
 		Page<Book> books = bookRepo.findByBookType(bookType, pageable);
+		logger.info("books from the db in service impl class : "+books);
 		Page<BookDetailsDTO> booksByType = books.map(book->{
+			logger.info("single book from the db in service impl class : "+book);
 		return	BookDetailsDTO.builder().bookId(book.getId())
 			                        .bookName(book.getBookName())
 			                        .authorName(book.getAuthorName())
@@ -222,6 +233,7 @@ public class BookServiceImpl implements BookService{
 			                        .bookImageUrl(baseUrlImage+File.separator+book.getBookImage())
 			                        .bookType(book.getBookType())
 			                        .genre(book.getGenre())
+			                        .totalPages(book.getTotalPages())
 			                        .build();
 		});
 		return booksByType;

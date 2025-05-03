@@ -144,7 +144,10 @@ public class BookController {
 	}
 	//get books by book type with pagination
 	@GetMapping("/booksByType")
-	public ResponseEntity<ApiResponse> getBooksByBookType(@RequestParam String bookType,@RequestParam(defaultValue = "0") int page,@RequestParam(defaultValue = "2 ") int pageSize){
+	public ResponseEntity<ApiResponse> getBooksByBookType(@RequestParam("bookType") String bookType,@RequestParam(defaultValue = "0") int page,@RequestParam(defaultValue = "2 ") int pageSize){
+		logger.info("bookType from request : "+bookType);
+		logger.info("page from request : "+page);
+		logger.info("pageSize : "+pageSize);
 		Pageable pageable = PageRequest.of(page, pageSize);
 		BookType type=null;
 		if(bookType !=null) {
@@ -155,6 +158,7 @@ public class BookController {
             }
        }
 		Page<BookDetailsDTO> allBooks = this.bookServ.getBooksByType(type, pageable);
+		logger.info("all Books from the db of the type : "+allBooks);
 		if(allBooks==null || allBooks.isEmpty()) {
 			ApiResponse error = ApiResponse.builder().status(404).message("Failure").data("No Books Found For the Type...").build();
 			return new ResponseEntity<ApiResponse>(error,HttpStatus.NOT_FOUND);

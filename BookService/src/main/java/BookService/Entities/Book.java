@@ -51,4 +51,6 @@ public class Book {
 	@Column(name="genre")
 	private GENRE genre;
 	
+	private int totalPages;
+	
 }
