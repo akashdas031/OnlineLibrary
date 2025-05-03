@@ -42,6 +42,7 @@ public class BookmarkServiceImpl implements BookmarkService{
 		String bookmarkId = UUID.randomUUID().toString().replace("-","").substring(10);
 		bookmarkDetails.setBookmarkId(bookmarkId);
 		bookmarkDetails.setBookmarkedTime(LocalDateTime.now());
+		logger.info("Favorite Status : "+bookmarkDetails.isFavorite());
 		BookMarkDetails bookmark = this.bookmarkRepo.save(bookmarkDetails);
 		return bookmark;
 	}
@@ -113,5 +114,13 @@ public class BookmarkServiceImpl implements BookmarkService{
 		}
 		return null;
 	}
+
+	@Override
+	public List<BookMarkDetails> getFavoriteBooks(String userId) {
+		List<BookMarkDetails> favoriteBooks = this.bookmarkRepo.findFavoriteBookByUserId(userId);
+		logger.info("Favorite Books : "+favoriteBooks);
+		return favoriteBooks;
+	}
+	
 
 }

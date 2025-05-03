@@ -11,6 +11,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 
 @Entity
 @Getter
@@ -18,6 +19,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder 
+@ToString
 public class BookMarkDetails {
 
 	@Id
@@ -30,5 +32,5 @@ public class BookMarkDetails {
 	private LocalDateTime bookmarkedTime;
 	private String notes;
 	private int lastPage;
-	private boolean isFavorite;	
+	private boolean favorite;	
 }

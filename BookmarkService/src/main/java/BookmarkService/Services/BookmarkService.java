@@ -12,5 +12,6 @@ public interface BookmarkService {
 	List<BookMarkDetails> getAllBookmarkDetails();
 	List<BookResponseDTO> getAllBookmarksByUserId(String userId);
 	List<BookResponseDTO> getAllBookmarksByBookId(String bookId);
+	List<BookMarkDetails> getFavoriteBooks(String userId);
 	
 }

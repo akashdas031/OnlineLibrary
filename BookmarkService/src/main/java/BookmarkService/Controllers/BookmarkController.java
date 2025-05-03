@@ -2,6 +2,8 @@ package BookmarkService.Controllers;
 
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,13 +24,15 @@ import BookmarkService.Services.BookmarkService;
 public class BookmarkController{
 	
 	private BookmarkService bookmarkService;
-	
+	private Logger logger=LoggerFactory.getLogger(BookmarkController.class);
 	private BookmarkController(BookmarkService bookmarkService) {
 		this.bookmarkService=bookmarkService;
 	}
 	
 	@PostMapping("/createBookmark")
 	public ResponseEntity<ApiResponse> createBookMark(@RequestBody BookMarkDetails bookmarkDetails){
+		logger.info("isFavorite in controller : "+bookmarkDetails.isFavorite());
+		logger.info("Bookmark in controller : "+bookmarkDetails);
 		BookMarkDetails createdBookMark = this.bookmarkService.createBookMark(bookmarkDetails);
 		if(createdBookMark != null) {
 			ApiResponse response = ApiResponse.builder().data(createdBookMark)
@@ -120,6 +124,25 @@ public class BookmarkController{
 		}else {
 			ApiResponse error = ApiResponse.builder().data("The book has not bookmarked yet...")
                     .message("No bookmark record found in the server")
+                    .status("Failure")
+                    .httpStatus(HttpStatus.NOT_FOUND)
+                    .build();
+			return new ResponseEntity<ApiResponse>(error,HttpStatus.NOT_FOUND);
+		}
+	}
+	@GetMapping("/user/getFavoriteBooks/{userId}")
+	public ResponseEntity<ApiResponse> getFavoriteBooks(@PathVariable("userId") String userId){
+		List<BookMarkDetails> favoriteBooks = this.bookmarkService.getFavoriteBooks(userId);
+		if(!favoriteBooks.isEmpty()) {
+			ApiResponse response = ApiResponse.builder().data(favoriteBooks)
+                    .message("List of Favorite Books...")
+                    .status("Success")
+                    .httpStatus(HttpStatus.OK)
+                    .build();
+			return new ResponseEntity<ApiResponse>(response,HttpStatus.OK);
+		}else {
+			ApiResponse error = ApiResponse.builder().data("You have not marked any book as your favorite book yet...")
+                    .message("Haven't feel in love with any book ??? Read some books and fall in love with the interesting chapters...")
                     .status("Failure")
                     .httpStatus(HttpStatus.NOT_FOUND)
                     .build();
